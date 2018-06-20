@@ -186,6 +186,14 @@ class MapView {
         {"latitude": latitude, "longitude": longitude, "zoom": zoom});
   }
 
+  void showInfoWindowForMarker(Marker marker) {
+    if (!_annotations.containsKey(marker.id)) {
+      return;
+    }
+    _annotations.remove(marker.id);
+    _channel.invokeMethod('showInfoWindowForMarker', marker.toMap());
+  }
+
   Future<Location> get centerLocation async {
     Map locationMap = await _channel.invokeMethod("getCenter");
     return new Location(locationMap["latitude"], locationMap["longitude"]);

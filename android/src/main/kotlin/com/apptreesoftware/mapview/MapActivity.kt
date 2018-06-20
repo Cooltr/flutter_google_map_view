@@ -415,6 +415,12 @@ class MapActivity : AppCompatActivity(),
         return polygon
     }
 
+    fun showInfoWindowForMarker(annotation: MapAnnotation) {
+        this.googleMap ?: return
+        val existingMarker = markerIdLookup[annotation.identifier] ?: return        
+        existingMarker.showInfoWindow()
+    }
+
     @SuppressLint("MissingPermission")
     override fun onRequestPermissionsResult(requestCode: Int,
                                             permissions: Array<out String>,

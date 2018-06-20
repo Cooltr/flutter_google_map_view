@@ -221,6 +221,9 @@ class MapViewPlugin(val activity: Activity) : MethodCallHandler {
             call.method == "removePolygon" -> {
                 handleRemovePolygon(call.arguments as Map<String, Any>)
             }
+            call.method == "showInfoWindowForMarker" -> {
+                handleShowInfoWindow(call.arguments as Map<String, Any>)
+            }
             else -> result.notImplemented()
         }
     }
@@ -316,6 +319,12 @@ class MapViewPlugin(val activity: Activity) : MethodCallHandler {
     fun handleRemovePolygon(map: Map<String, Any>) {
         MapPolygon.fromMap(map)?.let {
             mapActivity?.removePolygon(it)
+        }
+    }
+
+    fun handleShowInfoWindow(map: Map<String, Any>) {
+        MapAnnotation.fromMap(map)?.let {
+            mapActivity?.showInfoWindowForMarker(it)
         }
     }
 }
