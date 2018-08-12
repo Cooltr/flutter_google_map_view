@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/services.dart';
 import 'package:map_view/camera_position.dart';
+import 'package:map_view/indoor_building.dart';
 import 'package:map_view/location.dart';
 import 'package:map_view/map_options.dart';
 import 'package:map_view/marker.dart';
@@ -23,13 +24,21 @@ class MapView {
   MethodChannel _channel = const MethodChannel("com.apptreesoftware.map_view");
   StreamController<Marker> _annotationStreamController =
       new StreamController.broadcast();
+  StreamController<Map<Marker, Location>> _annotationDragStartController =
+      new StreamController.broadcast();
+  StreamController<Map<Marker, Location>> _annotationDragEndController =
+      new StreamController.broadcast();
+  StreamController<Map<Marker, Location>> _annotationDragController =
+      new StreamController.broadcast();
   StreamController<Polyline> _polylineStreamController =
       new StreamController.broadcast();
   StreamController<Polygon> _polygonStreamController =
       new StreamController.broadcast();
   StreamController<Location> _locationChangeStreamController =
       new StreamController.broadcast();
-  StreamController<Location> _mapInteractionStreamController =
+  StreamController<Location> _mapTapInteractionStreamController =
+      new StreamController.broadcast();
+  StreamController<Location> _mapLongTapInteractionStreamController =
       new StreamController.broadcast();
   StreamController<CameraPosition> _cameraStreamController =
       new StreamController.broadcast();
@@ -38,6 +47,10 @@ class MapView {
   StreamController<Null> _mapReadyStreamController =
       new StreamController.broadcast();
   StreamController<Marker> _infoWindowStreamController =
+      new StreamController.broadcast();
+  StreamController<IndoorBuilding> _indoorBuildingActivatedStreamController =
+      new StreamController.broadcast();
+  StreamController<IndoorLevel> _indoorLevelActivatedStreamController =
       new StreamController.broadcast();
 
   Map<String, Marker> _annotations = {};
@@ -64,6 +77,7 @@ class MapView {
     if (toolbarActions != null) {
       actions = toolbarActions.map((t) => t.toMap).toList();
     }
+    print(mapOptions.toMap());
     _channel.invokeMethod(
         'show', {"mapOptions": mapOptions.toMap(), "actions": actions});
   }
@@ -90,6 +104,7 @@ class MapView {
 
   void clearAnnotations() {
     _channel.invokeMethod('clearAnnotations');
+    _annotations.clear();
   }
 
   void addMarker(Marker marker) {
@@ -117,6 +132,7 @@ class MapView {
 
   void clearPolylines() {
     _channel.invokeMethod('clearPolylines');
+    _polylines.clear();
   }
 
   void addPolyline(Polyline polyline) {
@@ -144,6 +160,7 @@ class MapView {
 
   void clearPolygons() {
     _channel.invokeMethod('clearPolygons');
+    _polygons.clear();
   }
 
   void addPolygon(Polygon polygon) {
@@ -181,9 +198,8 @@ class MapView {
         'zoomToPolygons', {"polygons": polygonsIds, "padding": padding});
   }
 
-  void setCameraPosition(double latitude, double longitude, double zoom) {
-    _channel.invokeMethod("setCamera",
-        {"latitude": latitude, "longitude": longitude, "zoom": zoom});
+  void setCameraPosition(CameraPosition cameraPosition) {
+    _channel.invokeMethod("setCamera", cameraPosition.toMap());
   }
 
   void showInfoWindowForMarker(Marker marker) {
@@ -235,15 +251,25 @@ class MapView {
 
   Stream<Marker> get onTouchAnnotation => _annotationStreamController.stream;
 
-  Stream<Polyline> get onTouchPolyline =>
-      _polylineStreamController.stream;
+  Stream<Map<Marker, Location>> get onAnnotationDragStart =>
+      _annotationDragStartController.stream;
+
+  Stream<Map<Marker, Location>> get onAnnotationDragEnd =>
+      _annotationDragEndController.stream;
+
+  Stream<Map<Marker, Location>> get onAnnotationDrag =>
+      _annotationDragController.stream;
+
+  Stream<Polyline> get onTouchPolyline => _polylineStreamController.stream;
 
   Stream<Polygon> get onTouchPolygon => _polygonStreamController.stream;
 
   Stream<Location> get onLocationUpdated =>
       _locationChangeStreamController.stream;
 
-  Stream<Location> get onMapTapped => _mapInteractionStreamController.stream;
+  Stream<Location> get onMapTapped => _mapTapInteractionStreamController.stream;
+
+  Stream<Location> get onMapLongTapped => _mapLongTapInteractionStreamController.stream;
 
   Stream<CameraPosition> get onCameraChanged => _cameraStreamController.stream;
 
@@ -253,6 +279,12 @@ class MapView {
 
   Stream<Marker> get onInfoWindowTapped => _infoWindowStreamController.stream;
 
+  Stream<IndoorBuilding> get onIndoorBuildingActivated =>
+      _indoorBuildingActivatedStreamController.stream;
+
+  Stream<IndoorLevel> get onIndoorLevelActivated =>
+      _indoorLevelActivatedStreamController.stream;
+
   Future<dynamic> _handleMethod(MethodCall call) async {
     switch (call.method) {
       case "onMapReady":
@@ -260,13 +292,46 @@ class MapView {
         return new Future.value("");
       case "locationUpdated":
         Map args = call.arguments;
-        _locationChangeStreamController.add(new Location.fromMap(args));
+        _locationChangeStreamController.add(new Location.fromMapFull(args));
         return new Future.value("");
       case "annotationTapped":
         String id = call.arguments;
         var annotation = _annotations[id];
         if (annotation != null) {
           _annotationStreamController.add(annotation);
+        }
+        return new Future.value("");
+      case "annotationDragStart":
+        String id = call.arguments["id"];
+        var annotation = _annotations[id];
+        var latitude = call.arguments["latitude"];
+        var longitude = call.arguments["longitude"];
+        if (annotation != null) {
+          Map<Marker, Location> map = new Map();
+          map.putIfAbsent(annotation, () => new Location(latitude, longitude));
+          _annotationDragStartController.add(map);
+        }
+        return new Future.value("");
+      case "annotationDragEnd":
+        String id = call.arguments["id"];
+        var annotation = _annotations[id];
+        var latitude = call.arguments["latitude"];
+        var longitude = call.arguments["longitude"];
+        if (annotation != null) {
+          Map<Marker, Location> map = new Map();
+          map.putIfAbsent(annotation, () => new Location(latitude, longitude));
+          _annotationDragEndController.add(map);
+        }
+        return new Future.value("");
+      case "annotationDrag":
+        String id = call.arguments["id"];
+        var annotation = _annotations[id];
+        var latitude = call.arguments["latitude"];
+        var longitude = call.arguments["longitude"];
+        if (annotation != null) {
+          Map<Marker, Location> map = new Map();
+          map.putIfAbsent(annotation, () => new Location(latitude, longitude));
+          _annotationDragController.add(map);
         }
         return new Future.value("");
       case "polylineTapped":
@@ -293,13 +358,40 @@ class MapView {
       case "mapTapped":
         Map locationMap = call.arguments;
         Location location = new Location.fromMap(locationMap);
-        _mapInteractionStreamController.add(location);
+        _mapTapInteractionStreamController.add(location);
+        return new Future.value("");
+      case "mapLongTapped":
+        Map locationMap = call.arguments;
+        Location location = new Location.fromMap(locationMap);
+        _mapLongTapInteractionStreamController.add(location);
         return new Future.value("");
       case "cameraPositionChanged":
         _cameraStreamController.add(new CameraPosition.fromMap(call.arguments));
         return new Future.value("");
       case "onToolbarAction":
         _toolbarActionStreamController.add(call.arguments);
+        break;
+      case "indoorBuildingActivated":
+        if (call.arguments == null) {
+          _indoorBuildingActivatedStreamController.add(null);
+        } else {
+          List<IndoorLevel> levels = [];
+          for (var value in call.arguments["levels"]) {
+            levels.add(IndoorLevel(value["name"], value["shortName"]));
+          }
+          _indoorBuildingActivatedStreamController.add(new IndoorBuilding(
+              call.arguments["underground"],
+              call.arguments["defaultLevelIndex"],
+              levels));
+        }
+        break;
+      case "indoorLevelActivated":
+        if (call.arguments == null) {
+          _indoorLevelActivatedStreamController.add(null);
+        } else {
+          _indoorLevelActivatedStreamController.add(
+              IndoorLevel(call.arguments["name"], call.arguments["shortName"]));
+        }
         break;
     }
     return new Future.value("");

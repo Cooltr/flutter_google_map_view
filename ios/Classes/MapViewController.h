@@ -8,20 +8,21 @@
 #import <UIKit/UIKit.h>
 #import <CoreLocation/CoreLocation.h>
 #import <GoogleMaps/GoogleMaps/GMSMapView.h>
+#import <GoogleMaps/GoogleMaps/GMSIndoorDisplay.h>
 
 @class MapViewPlugin;
 @class MapAnnotation;
 @class MapPolyline;
 @class MapPolygon;
 
-@interface MapViewController : UIViewController <GMSMapViewDelegate>
+@interface MapViewController : UIViewController <GMSMapViewDelegate, GMSIndoorDisplayDelegate>
 
 - (id)initWithPlugin:(MapViewPlugin *)plugin
      navigationItems:(NSArray *)items
       cameraPosition:(GMSCameraPosition *)cameraPosition;
 
 - (void)shutdown;
-- (void)setCamera:(CLLocationCoordinate2D)location zoom:(float)zoom;
+- (void)setCamera:(CLLocationCoordinate2D)location zoom:(float)zoom bearing:(CLLocationDirection)bearing tilt:(double)tilt;
 
 - (void)updateAnnotations:(NSArray *)annotations;
 - (void)clearAnnotations;
@@ -45,7 +46,9 @@
 - (NSArray *)visiblePolylines;
 - (NSArray *)visiblePolygons;
 
-- (void)setLocationEnabled:(BOOL) enabled;
+- (void)setMapOptions:(BOOL)myLocationEnabled
+       locationButton:(BOOL)myLocationButton
+        compassButton:(BOOL)compassButton;
 
 @property (readonly) float zoomLevel;
 @property (readonly) CLLocationCoordinate2D centerLocation;
