@@ -205,6 +205,7 @@ class MapViewPlugin(val activity: Activity) : MethodCallHandler {
                     return
                 }
                 val mapOptions = call.argument<Map<String, Any>>("mapOptions")
+                if (mapOptions != null) {
                 val cameraDict = mapOptions["cameraPosition"] as Map<String, Any>
                 initialCameraPosition = getCameraPosition(cameraDict)
                 toolbarActions = getToolbarActions(call.argument<List<Map<String, Any>>>("actions"))
@@ -223,6 +224,7 @@ class MapViewPlugin(val activity: Activity) : MethodCallHandler {
                 activity.startActivity(intent)
                 result.success(true)
                 return
+                }
             }
             call.method == "dismiss" -> {
                 mapActivity?.finish()
